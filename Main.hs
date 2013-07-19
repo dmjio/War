@@ -1,13 +1,13 @@
 module Main where
 
 import           Control.Concurrent  (threadDelay)
-import           Control.Monad       (forM_, mapM_, replicateM)
+import           Control.Monad       (forM_, replicateM)
 import           Control.Monad.RWS   (RWST, ask, evalRWST, get, modify, put,
                                       tell)
 import           Control.Monad.State (State, evalState, liftIO, state)
 import           Data.List           (sort)
-import           System.Environment
-import           System.Random
+import           System.Environment  (getArgs)
+import           System.Random       (Random, StdGen, getStdGen, random, split)
 
 -- | TypeDefs
 type RanState = State StdGen
@@ -34,17 +34,16 @@ instance Show Card where
                          Hearts   -> "♥"
                          Spades   -> "♠"
 
-instance Eq Card where
-    (Card int1 suit1) == (Card int2 suit2) = int1 == int2
+instance Eq Card where (Card int1 _) == (Card int2 _) = int1 == int2
 
 -- | Convenience Functions
 logHand cardA cardB
     | cardA > cardB = tell ["p1"]
     | cardA < cardB = tell ["p2"]
     | otherwise     = tell ["war"]
-
-prnt x = liftIO $ putStrLn x
+prnt x = liftIO $ print x
 pct p total = show ((*100) $ fromIntegral p / fromIntegral total) ++ "%"
+delay = liftIO $ threadDelay 1000000
 
 -- | Shuffler
 shuffle :: (Ord a) => [a] -> RanState [a]
@@ -68,6 +67,7 @@ gameSummary stats p1Name p2Name = do
   putStrLn $ p1Name ++ " Winning %: " ++ pct p1 total
   putStrLn $ p2Name ++ " Winning %: " ++ pct p2 total
 
+-- | Env Arg Parser
 parseArgs :: IO (String, String)
 parseArgs = do
   args <- getArgs
@@ -111,34 +111,31 @@ gameLoop = do
              war 4
   evalWinners
 
+-- | When war occurs
 war :: Int -> War
 war num = do
   (left, right, gen) <- get
   (name1,name2) <- ask
   let [(l,ls), (r,rs)] = map (splitAt num) [left,right]
   prnt "Player 1"
-  forM_ l $ \x -> do
-            liftIO $ threadDelay 1000000
-            liftIO $ putStrLn $ show x
+  forM_ l $ \x -> delay >> prnt x
   prnt "Player 2"
-  forM_ r $ \x -> do
-            liftIO (threadDelay 1000000)
-            liftIO $ putStrLn $ show x
+  forM_ r $ \x -> delay >> prnt x
   case compare (length l) (length r) of
     LT -> do prnt $ name2 ++ " Wins Round!"
              put (ls, right ++ left, gen)
     GT -> do prnt $ name1 ++ " Wins Round!"
              put (left ++ right, rs, gen)
-    EQ -> do case compare (last l) (last r) of
-               LT -> do prnt $ name2 ++ " Wins Round!"
-                        liftIO (threadDelay 1000000)
-                        logHand (last l) (last r)
-                        put (ls, right ++ l, gen)
-               GT -> do prnt $ name1 ++ " Wins Round!"
-                        liftIO (threadDelay 1000000)
-                        logHand (last l) (last r)
-                        put (left ++ r, rs, gen)
-               EQ -> war (num + 4)
+    EQ -> case compare (last l) (last r) of
+            LT -> do prnt $ name2 ++ " Wins Round!"
+                     delay
+                     logHand (last l) (last r)
+                     put (ls, right ++ l, gen)
+            GT -> do prnt $ name1 ++ " Wins Round!"
+                     delay
+                     logHand (last l) (last r)
+                     put (left ++ r, rs, gen)
+            EQ -> war (num + 4)
 
 -- | Evaluate Winners
 evalWinners :: War
@@ -156,3 +153,4 @@ printScore :: War
 printScore = do
   (deck1, deck2, _) <- get
   prnt $ "SCORE: " ++ show (length deck1) ++ " - " ++ show (length deck2)
+
