@@ -1,3 +1,2 @@
 An implementation of the card game War, written in Haskell. 
-------
-A good pedagogical example of the RWST Monad Transformers as well. http://en.wikipedia.org/wiki/War_(card_game)
+A good pedagogical example of the RWST Monad Transformer as well. http://en.wikipedia.org/wiki/War_(card_game)
