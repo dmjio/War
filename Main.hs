@@ -5,6 +5,7 @@ import           Control.Monad       (forM_, replicateM)
 import           Control.Monad.RWS   (RWST, ask, evalRWST, get, modify, put,
                                       tell)
 import           Control.Monad.State (State, evalState, liftIO, state)
+import           Data.Function       (on)
 import           Data.List           (sort)
 import           System.Environment  (getArgs)
 import           System.Random       (Random, StdGen, getStdGen, random, split)
@@ -18,7 +19,7 @@ type War      = RWST Players [String] (Deck, Deck, StdGen) IO ()
 
 -- | Contructors
 data Suit     = Clubs | Diamonds | Hearts | Spades deriving (Eq,Ord,Enum)
-data Card     = Card Int Suit                      deriving (Ord)
+data Card     = Card { value :: Int, suit :: Suit }
 
 -- | Card Show Instance
 instance Show Card where
@@ -34,7 +35,10 @@ instance Show Card where
                          Hearts   -> "♥"
                          Spades   -> "♠"
 
+
+
 instance Eq Card where (Card int1 _) == (Card int2 _) = int1 == int2
+instance Ord Card where compare = compare `on` value
 
 -- | Convenience Functions
 logHand cardA cardB
