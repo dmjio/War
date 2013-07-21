@@ -41,7 +41,7 @@ logHand cardA cardB
     | cardA > cardB = tell ["p1"]
     | cardA < cardB = tell ["p2"]
     | otherwise     = tell ["war"]
-prnt x = liftIO $ print x
+prnt x = liftIO $ print  x
 pct p total = show ((*100) $ fromIntegral p / fromIntegral total) ++ "%"
 delay = liftIO $ threadDelay 1000000
 
@@ -82,8 +82,8 @@ main = do
   (p1,p2) <- parseArgs
   gen <- getStdGen
   let deck = do val <- [2..14]; suit <- [Clubs .. Spades]; return (Card val suit)
-  (deck1, deck2, g2) <- reShuffle (deck, deck, gen)
-  (_,stats) <- evalRWST gameLoop (p1,p2) (deck1, deck2, g2)
+  let (left,right) = splitAt 26 $ evalState (shuffle deck) gen
+  (_,stats) <- evalRWST gameLoop (p1,p2) (left, right, gen)
   gameSummary stats p1 p2
 
 -- | reShuffle
@@ -100,7 +100,7 @@ gameLoop = do
   (p1:xs, p2:ys, gen) <- get
   (name1,name2) <- ask
   logHand p1 p2
-  prnt $ show p1 ++ "  vs. " ++ show p2
+  liftIO $ putStrLn $ show p1 ++ "  vs. " ++ show p2
   case compare p1 p2 of
     LT -> do prnt $ name1 ++ " Wins Round!"
              put (xs ++ [p1,p2], ys, gen)
@@ -108,7 +108,7 @@ gameLoop = do
              put (xs, ys ++ [p1,p2], gen)
     EQ -> do prnt "War"
              logHand p1 p2
-             war 4
+             war 5
   evalWinners
 
 -- | When war occurs
@@ -118,9 +118,10 @@ war num = do
   (name1,name2) <- ask
   let [(l,ls), (r,rs)] = map (splitAt num) [left,right]
   prnt "Player 1"
-  forM_ l $ \x -> delay >> prnt x
+  forM_ (reverse . take 4 . reverse $ l) $ \x -> delay >> prnt x
   prnt "Player 2"
-  forM_ r $ \x -> delay >> prnt x
+  forM_ (reverse . take 4 . reverse $ r) $ \x -> delay >> prnt x
+  delay
   case compare (length l) (length r) of
     LT -> do prnt $ name2 ++ " Wins Round!"
              put (ls, right ++ left, gen)
