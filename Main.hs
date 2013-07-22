@@ -21,7 +21,7 @@ type War      = RWST Players [String] (Deck, Deck, StdGen) IO ()
 data Suit     = Clubs | Diamonds | Hearts | Spades deriving (Eq,Ord,Enum)
 data Card     = Card { value :: Int, suit :: Suit }
 
--- | Card Show Instance
+-- | Card Instance
 instance Show Card where
     show (Card val suit) = cardval val ++ cardsuit suit where
           cardval n | n > 1 && n < 11 = show n
@@ -35,8 +35,6 @@ instance Show Card where
                          Hearts   -> "♥"
                          Spades   -> "♠"
 
-
-
 instance Eq Card where (Card int1 _) == (Card int2 _) = int1 == int2
 instance Ord Card where compare = compare `on` value
 
@@ -45,7 +43,9 @@ logHand cardA cardB
     | cardA > cardB = tell ["p1"]
     | cardA < cardB = tell ["p2"]
     | otherwise     = tell ["war"]
-prnt x = liftIO $ print  x
+
+prnt  x = liftIO $ print  x
+prnt' x = liftIO $ putStrLn x
 pct p total = show ((*100) $ fromIntegral p / fromIntegral total) ++ "%"
 delay = liftIO $ threadDelay 1000000
 
@@ -63,11 +63,15 @@ gameSummary stats p1Name p2Name = do
   let p1 = length $ filter (=="p1") stats
       p2 = length $ filter (=="p2") stats
       wars = length $ filter (=="war") stats
+      p1wars = length $ filter (=="p1war") stats
+      p2wars = length $ filter (=="p2war") stats
       total = length stats
   putStrLn $ show total ++ " Total Games Played"
   putStrLn $ show wars ++ " Total Wars"
   putStrLn $ p1Name ++ " won " ++ show p1 ++ " times"
   putStrLn $ p2Name ++ " won " ++ show p2 ++ " times"
+  putStrLn $ p1Name ++ " wars won " ++ show p1wars ++ " times"
+  putStrLn $ p2Name ++ " wars won " ++ show p2wars ++ " times"
   putStrLn $ p1Name ++ " Winning %: " ++ pct p1 total
   putStrLn $ p2Name ++ " Winning %: " ++ pct p2 total
 
@@ -106,11 +110,11 @@ gameLoop = do
   logHand p1 p2
   liftIO $ putStrLn $ show p1 ++ "  vs. " ++ show p2
   case compare p1 p2 of
-    LT -> do prnt $ name1 ++ " Wins Round!"
+    LT -> do prnt' $ name2 ++ " Wins Round!"
              put (xs ++ [p1,p2], ys, gen)
-    GT -> do prnt $ name2 ++ " Wins Round!"
+    GT -> do prnt' $ name1 ++ " Wins Round!"
              put (xs, ys ++ [p1,p2], gen)
-    EQ -> do prnt "War"
+    EQ -> do prnt' "War"
              logHand p1 p2
              war 5
   evalWinners
@@ -121,22 +125,24 @@ war num = do
   (left, right, gen) <- get
   (name1,name2) <- ask
   let [(l,ls), (r,rs)] = map (splitAt num) [left,right]
-  prnt "Player 1"
+  prnt' "Player 1"
   forM_ (reverse . take 4 . reverse $ l) $ \x -> delay >> prnt x
-  prnt "Player 2"
+  prnt' "Player 2"
   forM_ (reverse . take 4 . reverse $ r) $ \x -> delay >> prnt x
   delay
   case compare (length l) (length r) of
-    LT -> do prnt $ name2 ++ " Wins Round!"
+    LT -> do prnt' $ name2 ++ " Wins Round!"
              put (ls, right ++ left, gen)
-    GT -> do prnt $ name1 ++ " Wins Round!"
+    GT -> do prnt' $ name1 ++ " Wins Round!"
              put (left ++ right, rs, gen)
     EQ -> case compare (last l) (last r) of
-            LT -> do prnt $ name2 ++ " Wins Round!"
+            LT -> do prnt' $ name2 ++ " Wins Round!"
+                     tell ["p2war"]
                      delay
                      logHand (last l) (last r)
                      put (ls, right ++ l, gen)
-            GT -> do prnt $ name1 ++ " Wins Round!"
+            GT -> do prnt' $ name1 ++ " Wins Round!"
+                     tell ["p1war"]
                      delay
                      logHand (last l) (last r)
                      put (left ++ r, rs, gen)
@@ -149,13 +155,13 @@ evalWinners = do
   (p1, p2) <- ask
   all@(deck1, deck2, g) <- get
   case (deck1, deck2) of
-    (x, []) -> prnt $ p1 ++ " Wins!"
-    ([], x) -> prnt $ p2 ++ " Wins!"
+    (x, []) -> prnt' $ p1 ++ " Wins!"
+    ([], x) -> prnt' $ p2 ++ " Wins!"
     otherwise -> modify (reShuffle all) >> gameLoop
 
 -- | Print Score
 printScore :: War
 printScore = do
   (deck1, deck2, _) <- get
-  prnt $ "SCORE: " ++ show (length deck1) ++ " - " ++ show (length deck2)
+  prnt' $ "SCORE: " ++ show (length deck1) ++ " - " ++ show (length deck2)
 
