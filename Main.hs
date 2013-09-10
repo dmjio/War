@@ -47,7 +47,7 @@ logHand cardA cardB
 prnt  x = liftIO $ print  x
 prnt' x = liftIO $ putStrLn x
 pct p total = show ((*100) $ fromIntegral p / fromIntegral total) ++ "%"
-delay = liftIO $ threadDelay 1000000
+delay = liftIO $ threadDelay 100000
 
 -- | Shuffler
 shuffle :: (Ord a) => [a] -> RanState [a]
@@ -55,25 +55,6 @@ shuffle as = do
     let n = length as
     rs1 <- replicateM n (state random :: RanState Int)
     return . map snd . sort $ zip rs1 as
-
--- | Game Summarizer
-gameSummary :: [String] -> String -> String -> IO ()
-gameSummary stats p1Name p2Name = do
-  putStrLn "------------STATS-------------"
-  let p1 = length $ filter (=="p1") stats
-      p2 = length $ filter (=="p2") stats
-      wars = length $ filter (=="war") stats
-      p1wars = length $ filter (=="p1war") stats
-      p2wars = length $ filter (=="p2war") stats
-      total = length stats
-  putStrLn $ show total ++ " Total Games Played"
-  putStrLn $ show wars ++ " Total Wars"
-  putStrLn $ p1Name ++ " won " ++ show p1 ++ " times"
-  putStrLn $ p2Name ++ " won " ++ show p2 ++ " times"
-  putStrLn $ p1Name ++ " wars won " ++ show p1wars ++ " times"
-  putStrLn $ p2Name ++ " wars won " ++ show p2wars ++ " times"
-  putStrLn $ p1Name ++ " Winning %: " ++ pct p1 total
-  putStrLn $ p2Name ++ " Winning %: " ++ pct p2 total
 
 -- | Env Arg Parser
 parseArgs :: IO (String, String)
@@ -92,7 +73,8 @@ main = do
   let deck = do val <- [2..14]; suit <- [Clubs .. Spades]; return (Card val suit)
   let (left,right) = splitAt 26 $ evalState (shuffle deck) gen
   (_,stats) <- evalRWST gameLoop (p1,p2) (left, right, gen)
-  gameSummary stats p1 p2
+  putStrLn "Game Over"
+
 
 -- | reShuffle
 reShuffle :: Monad m => (Deck, Deck, StdGen) -> m (Deck, Deck, StdGen)
